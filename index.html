@@ -873,6 +873,21 @@ $('#btnNight').onclick=()=>{
 // ================= boot =================
 applyNight();refreshChips();
 gpsStart();
+// ?demo opens a ready-made test drive (Taipei 101 -> Hsinchu station) that needs no GPS; ?demo&speed=6 plays it faster
+(function(){
+  const qs=new URLSearchParams(location.search);
+  if(!qs.has('demo')) return;
+  (async()=>{
+    S.points=[{lat:25.0330,lon:121.5654,name:'台北101',addr:''},{lat:24.8015,lon:120.9714,name:'新竹火車站',addr:''}];
+    S.mode='preview';openPlanner();renderMarkers();$('#sheet').style.display='block';
+    await replan();
+    if(!S.route) return;
+    await new Promise(r=>setTimeout(r,1200));
+    S.simMult=Math.max(1,Math.min(20,+qs.get('speed')||3));
+    S.simMode=true;startNav(true);
+    toast('示範模式：模擬以時速 60 公里 × '+S.simMult+' 行駛',5000);
+  })();
+})();
 if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')){
   navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
