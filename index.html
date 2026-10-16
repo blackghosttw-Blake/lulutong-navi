@@ -18,7 +18,26 @@ button{font:inherit;color:inherit;border:0;border-radius:12px;padding:10px 14px;
 button.primary{background:var(--blue);color:#fff}
 button.danger{background:var(--red);color:#fff}
 button.sel{outline:2px solid var(--blue)}
-#topbar{position:absolute;left:10px;right:10px;top:calc(10px + var(--safe-t));display:flex;gap:8px;z-index:5}
+#topbar{position:absolute;left:10px;right:10px;top:calc(10px + var(--safe-t));display:flex;flex-direction:column;gap:8px;z-index:5}
+.srow{display:flex;gap:8px}
+#chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none}
+#chips::-webkit-scrollbar{display:none}
+.chip{white-space:nowrap;padding:7px 12px;font-size:14px;border-radius:18px;flex:none}
+.chip .ed{margin-left:8px;opacity:.5;font-size:12px;padding:4px}
+#altRow{display:none;margin-bottom:8px}
+#altRow button{box-shadow:none;border:1px solid var(--line);padding:7px 8px;font-size:13px;text-align:left;line-height:1.25}
+#altRow button.sel{border-color:var(--blue);background:#eff6ff;color:var(--blue);outline:0}
+#altRow b{display:block;font-size:15px}
+.night{--panel:#1f2937;--ink:#f3f4f6;--muted:#9ca3af;--line:#374151}
+.night #map canvas,.night #jmap canvas{filter:invert(.9) hue-rotate(180deg) brightness(.85) contrast(.95)}
+.night button{background:#374151;color:#f3f4f6}
+.night button.primary{background:#2563eb;color:#fff}
+.night button.danger{background:#dc2626;color:#fff}
+.night #altRow button.sel,.night #prefs button.sel{background:#1e3a8a;color:#bfdbfe;border-color:#3b82f6}
+.night #q,.night #results,.night #planner,.night .plRow input{background:#1f2937;color:#f3f4f6}
+.night #results div{border-color:#374151}
+.night #speed{background:#1f2937;color:#f3f4f6;border-color:#9ca3af}
+.night #attr{color:#9ca3af;text-shadow:none}
 #q{flex:1;min-width:0;border:0;border-radius:12px;padding:12px 14px;font:inherit;box-shadow:0 1px 6px rgba(0,0,0,.3);background:#fff;color:var(--ink)}
 #results{position:absolute;left:10px;right:10px;top:calc(62px + var(--safe-t));background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.3);z-index:8;max-height:45vh;overflow:auto;display:none}
 #planner{position:absolute;left:8px;right:8px;top:calc(8px + var(--safe-t));background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.3);padding:6px 8px 8px;z-index:6;display:none}
@@ -36,7 +55,7 @@ button.sel{outline:2px solid var(--blue)}
 #results div{padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer}
 #results div:last-child{border:0}
 #results small{display:block;color:var(--muted)}
-#sheet{position:absolute;left:0;right:0;bottom:0;background:var(--panel);border-radius:18px 18px 0 0;box-shadow:0 -2px 12px rgba(0,0,0,.25);padding:14px 14px calc(14px + var(--safe-b));z-index:5;display:none}
+#sheet{position:absolute;left:0;right:0;bottom:0;background:var(--panel);border-radius:18px 18px 0 0;box-shadow:0 -2px 12px rgba(0,0,0,.25);padding:14px 14px calc(24px + var(--safe-b));z-index:5;display:none}
 #sheet .title{font-weight:700;font-size:17px}
 #sheet .sub{color:var(--muted);margin:2px 0 10px}
 .row{display:flex;gap:8px;flex-wrap:wrap}
@@ -56,11 +75,11 @@ button.sel{outline:2px solid var(--blue)}
 #junction{position:absolute;left:8px;width:min(46vw,260px);height:min(34vh,230px);top:calc(150px + var(--safe-t));border-radius:14px;overflow:hidden;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.4);z-index:5;display:none;background:#cbd5e1}
 #jmap{position:absolute;inset:0}
 #jlabel{position:absolute;left:0;right:0;bottom:0;background:rgba(15,122,61,.95);color:#fff;font-size:12px;padding:3px 8px;font-weight:700}
-#speedBox{position:absolute;left:8px;bottom:calc(96px + var(--safe-b));z-index:5;display:none;gap:8px;flex-direction:column;align-items:flex-end}
+#speedBox{position:absolute;left:8px;bottom:calc(112px + var(--safe-b));z-index:5;display:none;gap:8px;flex-direction:column;align-items:flex-end}
 #speed{width:70px;height:70px;border-radius:50%;background:#fff;border:4px solid #111;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:24px;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.35)}
 #speed small{font-size:11px;font-weight:600;color:var(--muted)}
 #speed.over{border-color:var(--red);color:var(--red)}
-#navBar{position:absolute;left:0;right:0;bottom:0;background:var(--panel);padding:10px 14px calc(10px + var(--safe-b));z-index:5;display:none;align-items:center;gap:10px;box-shadow:0 -2px 10px rgba(0,0,0,.25);border-radius:16px 16px 0 0}
+#navBar{position:absolute;left:0;right:0;bottom:0;background:var(--panel);padding:10px 14px calc(22px + var(--safe-b));z-index:5;display:none;align-items:center;gap:10px;box-shadow:0 -2px 10px rgba(0,0,0,.25);border-radius:16px 16px 0 0}
 #navBar .info{flex:1;min-width:0}
 #navBar .big{font-weight:800;font-size:20px}
 #navBar .sm{color:var(--muted);font-size:13px}
@@ -79,8 +98,18 @@ button.sel{outline:2px solid var(--blue)}
 <div id="map"></div>
 
 <div id="topbar">
-  <input id="q" type="search" placeholder="搜尋地點或地址" enterkeyhint="search" autocomplete="off">
-  <button id="btnGo" class="primary">搜尋</button>
+  <div class="srow">
+    <input id="q" type="search" placeholder="搜尋地點或地址" enterkeyhint="search" autocomplete="off">
+    <button id="btnGo" class="primary">搜尋</button>
+  </div>
+  <div id="chips">
+    <button class="chip" data-slot="home">🏠 住家<span class="ed" data-ed="home">✎</span></button>
+    <button class="chip" data-slot="work">🏢 公司<span class="ed" data-ed="work">✎</span></button>
+    <button class="chip" data-poi="fuel" data-name="加油站">⛽ 加油站</button>
+    <button class="chip" data-poi="parking" data-name="停車場">🅿 停車場</button>
+    <button class="chip" data-poi="convenience store" data-name="便利商店">🏪 便利商店</button>
+    <button class="chip" data-poi="toilet" data-name="廁所">🚻 廁所</button>
+  </div>
 </div>
 <div id="planner">
   <div id="plRows"></div>
@@ -102,6 +131,10 @@ button.sel{outline:2px solid var(--blue)}
 <div id="speedBox"><div id="speed"><span id="spd">0</span><small id="lim">km/h</small></div></div>
 
 <div id="fab">
+  <button id="btnZoomIn" title="放大">＋</button>
+  <button id="btnZoomOut" title="縮小">－</button>
+  <button id="btn3d" title="2D / 3D 視角" style="font-size:14px">3D</button>
+  <button id="btnNight" title="夜間模式" style="font-size:18px">🌙</button>
   <button id="btnLocate" title="回到目前位置">⌖</button>
   <button id="btnMute" title="語音" style="display:none">🔊</button>
 </div>
@@ -109,6 +142,7 @@ button.sel{outline:2px solid var(--blue)}
 <div id="sheet">
   <div class="title" id="shTitle"></div>
   <div class="sub" id="shSub"></div>
+  <div class="row" id="altRow"></div>
   <div class="row" id="prefs" style="margin-bottom:10px">
     <button data-pref="fast" class="sel">最快</button>
     <button data-pref="notoll">少收費</button>
@@ -142,7 +176,7 @@ const MAP_STYLE={version:8,sources:{osm:{type:'raster',tiles:['https://tile.open
 const DEFAULT_CENTER=[121.5654,25.033];
 
 // ================= state =================
-const S={mode:'idle',pos:null,heading:0,speed:0,points:[],pickRow:null,route:null,pref:'fast',muted:false,watch:null,sim:null,
+const S={mode:'idle',pos:null,heading:0,speed:0,points:[],pickRow:null,route:null,routes:[],settingSlot:null,pitch:58,zoomAdj:0,pref:'fast',muted:false,watch:null,sim:null,
   idx:0,s:0,offCount:0,lastReroute:0,spoken:{},cams:new Map(),camAlong:[],wake:null,rerouting:false,follow:true};
 
 // ================= helpers =================
@@ -157,11 +191,34 @@ function fmtDist(m){return m<1000?`${Math.max(10,Math.round(m/10)*10)} 公尺`:`
 function fmtDur(sec){const m=Math.round(sec/60);return m<60?`${m} 分鐘`:`${Math.floor(m/60)} 小時 ${m%60} 分`}
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 
+// ================= saved places, recent searches, night mode =================
+const store={
+  get(k,d){try{const v=JSON.parse(localStorage.getItem('navi.'+k));return v==null?d:v}catch(e){return d}},
+  set(k,v){try{localStorage.setItem('navi.'+k,JSON.stringify(v))}catch(e){}}
+};
+let places=store.get('places',{}),recents=store.get('recent',[]);
+function saveRecent(p){
+  if(!p||p.lat==null||!p.name||p.name==='地圖上的位置') return;
+  const c={lat:p.lat,lon:p.lon,name:p.name,addr:p.addr||''};
+  recents=[c,...recents.filter(r=>!(Math.abs(r.lat-c.lat)<1e-4&&Math.abs(r.lon-c.lon)<1e-4))].slice(0,8);
+  store.set('recent',recents);
+}
+function applyNight(){
+  const mode=store.get('night','auto'),h=new Date().getHours();
+  const on=mode==='on'||(mode==='auto'&&(h>=18||h<6));
+  document.body.classList.toggle('night',on);
+  $('#btnNight').textContent=mode==='auto'?'🌙':mode==='on'?'🌑':'☀️';
+  $('#btnNight').title='夜間模式：'+(mode==='auto'?'自動':mode==='on'?'開':'關');
+}
+setInterval(applyNight,60000);
+
 // ================= map =================
 const map=new maplibregl.Map({container:'map',style:MAP_STYLE,center:DEFAULT_CENTER,zoom:12,attributionControl:false,maxPitch:75,dragRotate:true});
 let userMarker=null;
 const emptyFC={type:'FeatureCollection',features:[]};
 map.on('load',()=>{
+  map.addSource('route-alt',{type:'geojson',data:emptyFC});
+  map.addLayer({id:'route-alt',type:'line',source:'route-alt',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#94a3b8','line-width':['interpolate',['linear'],['zoom'],8,4,16,9],'line-opacity':.85}});
   map.addSource('route',{type:'geojson',data:emptyFC});
   map.addLayer({id:'route-casing',type:'line',source:'route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#0b3a9e','line-width':['interpolate',['linear'],['zoom'],8,6,16,16]}});
   map.addLayer({id:'route-line',type:'line',source:'route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#3b82f6','line-width':['interpolate',['linear'],['zoom'],8,4,16,11]}});
@@ -179,6 +236,8 @@ function drawRoute(){
   if(!S.mapReady) return;
   const fc=S.route?{type:'FeatureCollection',features:[{type:'Feature',geometry:{type:'LineString',coordinates:S.route.pts},properties:{}}]}:emptyFC;
   map.getSource('route').setData(fc);
+  const alts=S.route&&S.mode!=='nav'?(S.routes||[]).filter(r=>r!==S.route):[];
+  map.getSource('route-alt').setData({type:'FeatureCollection',features:alts.map(r=>({type:'Feature',geometry:{type:'LineString',coordinates:r.pts},properties:{}}))});
   if(S.jmap&&S.jmapReady) S.jmap.getSource('route').setData(fc);
 }
 
@@ -200,7 +259,7 @@ function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>f
 function openResults(row,items){
   const b=$('#results');
   const rows=$('#plRows').children,el=row>=0&&rows[row];
-  b.style.top=(el?el.getBoundingClientRect().bottom+4:62)+'px';
+  b.style.top=(el?el.getBoundingClientRect().bottom+4:$('#topbar').getBoundingClientRect().bottom+4)+'px';
   b.style.display='block'; b.innerHTML='';
   if(!items.length){b.innerHTML='<div>找不到結果</div>';return}
   items.forEach(it=>{
@@ -219,9 +278,57 @@ async function runSearch(row,q,onPick){
 }
 function doSearch(){
   const q=$('#q').value.trim(); if(!q) return;
-  runSearch(-1,q,p=>{$('#q').blur();pickDestination(p)});
+  runSearch(-1,q,p=>{
+    $('#q').blur();
+    if(S.settingSlot){ // saving home / work instead of navigating
+      places[S.settingSlot]={lat:p.lat,lon:p.lon,name:p.name,addr:p.addr};store.set('places',places);
+      S.settingSlot=null;$('#q').placeholder='搜尋地點或地址';$('#q').value='';refreshChips();toast('已儲存');
+      return;
+    }
+    pickDestination(p);
+  });
 }
 $('#btnGo').onclick=doSearch;
+// tapping the empty search box lists saved and recent places
+$('#q').addEventListener('focus',()=>{
+  if($('#q').value.trim()||S.settingSlot) return;
+  const items=[];
+  if(places.home) items.push({label:'🏠 住家',sub:places.home.name,fn:()=>pickDestination(places.home)});
+  if(places.work) items.push({label:'🏢 公司',sub:places.work.name,fn:()=>pickDestination(places.work)});
+  recents.forEach(r=>items.push({label:r.name,sub:'最近 · '+r.addr,fn:()=>pickDestination(r)}));
+  if(items.length) openResults(-1,items);
+});
+// shortcut chips: home / work / nearby categories
+function refreshChips(){
+  [['home','🏠 住家'],['work','🏢 公司']].forEach(([slot,label])=>{
+    const b=document.querySelector(`[data-slot="${slot}"]`);
+    b.firstChild.textContent=places[slot]?label:label+'（設定）';
+  });
+}
+function setSlot(slot){
+  S.settingSlot=slot;$('#q').value='';
+  $('#q').placeholder=`輸入${slot==='home'?'住家':'公司'}地址後選擇結果`;$('#q').focus();
+}
+async function nearby(term,name){
+  const c=S.pos?[S.pos.lon,S.pos.lat]:[map.getCenter().lng,map.getCenter().lat],d=0.05;
+  openResults(-1,[{label:`搜尋附近的${name}…`}]);
+  try{
+    const r=await fetch(`${NOMINATIM}?format=jsonv2&limit=12&bounded=1&viewbox=${c[0]-d},${c[1]+d},${c[0]+d},${c[1]-d}&accept-language=zh-TW&q=${encodeURIComponent(term)}`);
+    if(!r.ok) throw new Error('搜尋服務暫時無法使用');
+    const list=(await r.json()).map(it=>{
+      const parts=it.display_name.split(',').map(s=>s.trim());
+      return {lat:+it.lat,lon:+it.lon,name:it.name||name,addr:parts.slice(it.name?1:0,4).join(' '),dist:hav(c,[+it.lon,+it.lat])};
+    }).sort((a,b)=>a.dist-b.dist).slice(0,8);
+    openResults(-1,list.length?list.map(p=>({label:p.name,sub:`${fmtDist(p.dist)} · ${p.addr}`,fn:()=>pickDestination(p)})):[{label:`附近找不到${name}`}]);
+  }catch(e){openResults(-1,[{label:'搜尋失敗：'+e.message}])}
+}
+document.querySelectorAll('#chips .chip').forEach(b=>b.onclick=e=>{
+  e.stopPropagation();
+  if(b.dataset.slot){
+    const slot=b.dataset.slot;
+    if(e.target.dataset.ed||!places[slot]) setSlot(slot); else pickDestination(places[slot]);
+  }else nearby(b.dataset.poi,b.dataset.name);
+});
 $('#q').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doSearch()}});
 document.addEventListener('click',e=>{if(!e.target.closest('#results,#topbar,#planner'))$('#results').style.display='none'});
 
@@ -252,7 +359,7 @@ async function reverseName(p){
     const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=zh-TW&lat=${p.lat}&lon=${p.lon}`);
     if(!r.ok) return; const j=await r.json();
     const name=j.name||(j.display_name||'').split(',')[0];
-    if(name&&S.points.includes(p)){p.name=name;p.addr=(j.display_name||'').split(',').slice(1,4).join(' ').trim();renderPlanner();updateTitle()}
+    if(name&&S.points.includes(p)){p.name=name;p.addr=(j.display_name||'').split(',').slice(1,4).join(' ').trim();renderPlanner();updateTitle();if(p===S.points[S.points.length-1])saveRecent(p)}
   }catch(e){}
 }
 
@@ -326,24 +433,30 @@ $('#btnAddStop').onclick=()=>{
 };
 $('#btnSwap').onclick=()=>{S.points.reverse();renderPlanner();renderMarkers();replan()};
 function resetPlan(){
-  S.points=[];S.route=null;S.pickRow=null;renderMarkers();drawRoute();closePlanner();
+  S.points=[];S.route=null;S.routes=[];S.pickRow=null;renderAlts();renderMarkers();drawRoute();closePlanner();
   $('#sheet').style.display='none';$('#topbar').style.display='flex';S.mode='idle';
 }
 $('#btnPlanClose').onclick=()=>{endNav(true);resetPlan()};
 
 // ================= routing =================
-async function fetchRoute(points){
+async function fetchRoute(points,opts={}){
   const co={use_highways:1,use_tolls:1};
   if(S.pref==='notoll') co.use_tolls=0;
   if(S.pref==='nohighway'){co.use_highways=0}
   const pts2=points.map((p,i)=>i===0&&p.me&&S.pos?Object.assign({},p,{lat:S.pos.lat,lon:S.pos.lon}):p);
   const body={locations:pts2.map(p=>({lat:p.lat,lon:p.lon,type:'break'})),costing:'auto',costing_options:{auto:co},directions_options:{units:'kilometers',language:'zh-CN'}};
+  if(opts.alts&&pts2.length===2) body.alternates=2; // Valhalla only offers alternatives for a two-point route
   const r=await fetch(VALHALLA,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const j=await r.json();
   if(!r.ok||!j.trip) throw new Error((j&&j.error)||'無法規劃路線');
-  // join the legs (one per pair of consecutive points) into a single polyline and maneuver list
-  let pts=[],maneuvers=[],tollAny=false;const L=j.trip.legs.length;
-  j.trip.legs.forEach((leg,li)=>{
+  const rt=parseTrip(j.trip,pts2);
+  rt.alts=opts.alts&&j.alternates?j.alternates.filter(a=>a&&a.trip).map(a=>parseTrip(a.trip,pts2)):[];
+  return rt;
+}
+// join the legs (one per pair of consecutive points) into a single polyline and maneuver list
+function parseTrip(trip,pts2){
+  let pts=[],maneuvers=[],tollAny=false;const L=trip.legs.length;
+  trip.legs.forEach((leg,li)=>{
     const lp=decode(leg.shape),base=pts.length?pts.length-1:0;
     pts=pts.length?pts.concat(lp.slice(1)):lp;
     leg.maneuvers.forEach((m,mi)=>{
@@ -355,7 +468,7 @@ async function fetchRoute(points){
     });
   });
   const cum=[0];for(let i=1;i<pts.length;i++)cum.push(cum[i-1]+hav(pts[i-1],pts[i]));
-  return {pts,cum,maneuvers,length:cum[cum.length-1],time:j.trip.summary.time,tollAny,points:pts2};
+  return {pts,cum,maneuvers,length:cum[cum.length-1],time:trip.summary.time,tollAny,points:pts2};
 }
 function nm(p){return p?(p.me?'我的位置':p.name||'未命名'):''}
 function updateTitle(){
@@ -368,6 +481,7 @@ async function pickDestination(d){
     S.points=[S.pos?{me:true,name:'我的位置',lat:S.pos.lat,lon:S.pos.lon}:{empty:true},d];
   }else S.points[S.points.length-1]=d;
   S.mode='preview';
+  saveRecent(d);
   openPlanner();renderMarkers();$('#sheet').style.display='block';
   await replan();
 }
@@ -377,25 +491,45 @@ async function replan(){
   updateTitle();
   if(!S.points.every(ptSet)){
     $('#shSub').textContent='請把起點、中途點與終點都填好';sheetBtns(false);
-    S.route=null;drawRoute();return;
+    S.route=null;S.routes=[];renderAlts();drawRoute();return;
   }
   const seq=++planSeq;
   $('#shSub').textContent='規劃路線中…';sheetBtns(false);
   try{
-    const rt=await fetchRoute(S.points);
+    const rt=await fetchRoute(S.points,{alts:true});
     if(seq!==planSeq) return;
-    S.route=rt;resetProgress();drawRoute();
-    const stops=S.points.length-2;
-    $('#shSub').textContent=`${fmtDist(rt.length)} · 約 ${fmtDur(rt.time)}${stops?` · ${stops} 個中途點`:''}${rt.tollAny?' · 含收費路段':''}`;
-    sheetBtns(true);
-    const b=rt.pts.reduce((a,p)=>a.extend(p),new maplibregl.LngLatBounds(rt.pts[0],rt.pts[0]));
-    const top=$('#planner').offsetHeight+30;
-    map.fitBounds(b,{padding:{top,bottom:230,left:40,right:40},duration:700});
-    ensureCameras(0);
+    S.routes=[rt,...(rt.alts||[])];
+    selectRoute(rt,true);
   }catch(e){
     if(seq!==planSeq) return;
-    $('#shSub').textContent='路線規劃失敗：'+e.message;S.route=null;drawRoute();
+    $('#shSub').textContent='路線規劃失敗：'+e.message;S.route=null;S.routes=[];renderAlts();drawRoute();
   }
+}
+// show one of the planned routes (the fastest, or one of its alternatives) in the sheet and on the map
+function selectRoute(rt,fit){
+  S.route=rt;resetProgress();drawRoute();
+  const stops=S.points.length-2;
+  $('#shSub').textContent=`${fmtDist(rt.length)} · 約 ${fmtDur(rt.time)}${stops?` · ${stops} 個中途點`:''}${rt.tollAny?' · 含收費路段':''}`;
+  $('#btnStart').disabled=$('#btnSim').disabled=false;
+  renderAlts();
+  if(fit){
+    const b=rt.pts.reduce((a,p)=>a.extend(p),new maplibregl.LngLatBounds(rt.pts[0],rt.pts[0]));
+    const top=$('#planner').offsetHeight+30;
+    map.fitBounds(b,{padding:{top,bottom:260,left:40,right:40},duration:700});
+  }
+  ensureCameras(0);
+}
+function renderAlts(){
+  const row=$('#altRow');row.innerHTML='';
+  if(!S.routes||S.routes.length<2){row.style.display='none';return}
+  row.style.display='flex';
+  S.routes.forEach((r,i)=>{
+    const b=document.createElement('button');
+    if(r===S.route) b.className='sel';
+    b.innerHTML=`<b>${fmtDur(r.time)}</b>${fmtDist(r.length)}${r.tollAny?' · 收費':''}`;
+    b.onclick=()=>{if(r!==S.route)selectRoute(r,false)};
+    row.appendChild(b);
+  });
 }
 document.querySelectorAll('#prefs button').forEach(b=>b.onclick=()=>{
   S.pref=b.dataset.pref;document.querySelectorAll('#prefs button').forEach(x=>x.classList.toggle('sel',x===b));
@@ -569,7 +703,7 @@ function junctionTick(j,m,d){
 const NAV_PAD=()=>({top:Math.round(innerHeight*.42),bottom:60,left:0,right:0});
 function startNav(sim){
   if(!S.route) return;
-  S.mode='nav'; S.simMode=!!sim; resetProgress();
+  S.mode='nav'; S.simMode=!!sim; resetProgress(); drawRoute();
   $('#sheet').style.display='none';$('#topbar').style.display='none';closePlanner();
   $('#navBanner').style.display='block';$('#navBar').style.display='flex';$('#speedBox').style.display='flex';$('#btnMute').style.display='block';
   $('#fab').style.bottom='calc(110px + var(--safe-b))';
@@ -579,7 +713,7 @@ function startNav(sim){
   try{if('wakeLock' in navigator)navigator.wakeLock.request('screen').then(w=>S.wake=w).catch(()=>{})}catch(e){}
   if(sim){startSim()}
   const p=S.pos||{lon:S.route.pts[0][0],lat:S.route.pts[0][1]};
-  map.easeTo({center:[p.lon,p.lat],zoom:17,pitch:58,bearing:bearing(S.route.pts[0],S.route.pts[Math.min(5,S.route.pts.length-1)]),padding:NAV_PAD(),duration:800});
+  map.easeTo({center:[p.lon,p.lat],zoom:17,pitch:S.pitch,bearing:bearing(S.route.pts[0],S.route.pts[Math.min(5,S.route.pts.length-1)]),padding:NAV_PAD(),duration:800});
   ensureCameras(0);
   if(S.pos&&!sim) onPosition(S.pos);
 }
@@ -634,7 +768,11 @@ function onPosition(p){
   }else signEl.style.display='none';
   $('#nbRemain').textContent=`${fmtDist(remain)} · ${fmtDur(rt.time*remain/rt.length)}`;
   const eta=new Date(Date.now()+rt.time*remain/rt.length*1000);
-  $('#nbEta').textContent=`預計 ${String(eta.getHours()).padStart(2,'0')}:${String(eta.getMinutes()).padStart(2,'0')} 抵達`;
+  // current road = the street of the maneuver we are on (fall back to the last named one)
+  let road=S.road||'';
+  for(let k=j-1;k>=0;k--){const sn=(rt.maneuvers[k].street_names||[]).join('、');if(sn){road=sn;break}}
+  S.road=road;
+  $('#nbEta').textContent=`${road?road+' · ':''}預計 ${String(eta.getHours()).padStart(2,'0')}:${String(eta.getMinutes()).padStart(2,'0')} 抵達`;
 
   // voice announcements
   const fast=S.speed*3.6>70;const far=fast?2000:900,near=fast?600:300,now=fast?150:60;
@@ -657,7 +795,7 @@ function onPosition(p){
 
   if(S.follow){
     const z=spdKmh>80?15.8:spdKmh>40?16.6:17.3;
-    map.easeTo({center:[p.lon,p.lat],bearing:S.heading,pitch:58,zoom:z,padding:NAV_PAD(),duration:S.simMode?400:900,easing:t=>t});
+    map.easeTo({center:[p.lon,p.lat],bearing:S.heading,pitch:S.pitch,zoom:z+S.zoomAdj,padding:NAV_PAD(),duration:S.simMode?400:900,easing:t=>t});
   }
 }
 async function reroute(){
@@ -719,7 +857,21 @@ function startSim(){
 }
 function stopSim(){if(S.sim){clearInterval(S.sim);S.sim=null}}
 
+// ================= view controls =================
+$('#btnZoomIn').onclick=()=>{if(S.mode==='nav'){S.zoomAdj=Math.min(2,S.zoomAdj+.5);S.follow=true;if(S.pos)onPosition(S.pos)}else map.zoomIn()};
+$('#btnZoomOut').onclick=()=>{if(S.mode==='nav'){S.zoomAdj=Math.max(-2,S.zoomAdj-.5);S.follow=true;if(S.pos)onPosition(S.pos)}else map.zoomOut()};
+$('#btn3d').onclick=()=>{
+  S.pitch=S.pitch?0:58;$('#btn3d').textContent=S.pitch?'3D':'2D';
+  if(S.mode==='nav'){S.follow=true;if(S.pos)onPosition(S.pos)}else map.easeTo({pitch:S.pitch?45:0,duration:400});
+};
+$('#btnNight').onclick=()=>{
+  const order=['auto','on','off'],cur=store.get('night','auto');
+  store.set('night',order[(order.indexOf(cur)+1)%3]);applyNight();
+  toast('夜間模式：'+{auto:'自動（晚上 6 點到早上 6 點）',on:'開',off:'關'}[store.get('night','auto')]);
+};
+
 // ================= boot =================
+applyNight();refreshChips();
 gpsStart();
 if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')){
   navigator.serviceWorker.register('sw.js').catch(()=>{});
