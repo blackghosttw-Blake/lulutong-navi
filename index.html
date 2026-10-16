@@ -20,7 +20,19 @@ button.danger{background:var(--red);color:#fff}
 button.sel{outline:2px solid var(--blue)}
 #topbar{position:absolute;left:10px;right:10px;top:calc(10px + var(--safe-t));display:flex;gap:8px;z-index:5}
 #q{flex:1;min-width:0;border:0;border-radius:12px;padding:12px 14px;font:inherit;box-shadow:0 1px 6px rgba(0,0,0,.3);background:#fff;color:var(--ink)}
-#results{position:absolute;left:10px;right:10px;top:calc(62px + var(--safe-t));background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.3);z-index:5;max-height:45vh;overflow:auto;display:none}
+#results{position:absolute;left:10px;right:10px;top:calc(62px + var(--safe-t));background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.3);z-index:8;max-height:45vh;overflow:auto;display:none}
+#planner{position:absolute;left:8px;right:8px;top:calc(8px + var(--safe-t));background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.3);padding:6px 8px 8px;z-index:6;display:none}
+.plRow{display:flex;align-items:center;gap:6px;margin:5px 0}
+.plRow input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:9px 10px;font:inherit;background:#fff;color:var(--ink)}
+.plIcon{width:22px;height:22px;text-align:center;font-size:14px;line-height:22px;font-weight:700;flex:none}
+.plIcon.org{color:#16a34a}
+.plIcon.stop{background:#f59e0b;color:#fff;border-radius:50%;font-size:12px}
+.mini{padding:6px 8px;box-shadow:none;border:1px solid var(--line);font-size:14px;min-width:34px;flex:none}
+#plBtns{margin-top:4px}
+#plBtns button{box-shadow:none;border:1px solid var(--line);padding:8px 10px;font-size:14px}
+.stopMarker{width:24px;height:24px;border-radius:50%;color:#fff;font:700 13px/20px system-ui,sans-serif;text-align:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45)}
+.stopMarker.org{background:#16a34a}
+.stopMarker.stop{background:#f59e0b}
 #results div{padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer}
 #results div:last-child{border:0}
 #results small{display:block;color:var(--muted)}
@@ -69,6 +81,14 @@ button.sel{outline:2px solid var(--blue)}
 <div id="topbar">
   <input id="q" type="search" placeholder="搜尋地點或地址" enterkeyhint="search" autocomplete="off">
   <button id="btnGo" class="primary">搜尋</button>
+</div>
+<div id="planner">
+  <div id="plRows"></div>
+  <div class="row" id="plBtns">
+    <button id="btnAddStop">＋ 新增中途點</button>
+    <button id="btnSwap">⇅ 對調起終點</button>
+    <button id="btnPlanClose" style="flex:0 0 auto" title="關閉規劃">✕</button>
+  </div>
 </div>
 <div id="results"></div>
 
@@ -122,7 +142,7 @@ const MAP_STYLE={version:8,sources:{osm:{type:'raster',tiles:['https://tile.open
 const DEFAULT_CENTER=[121.5654,25.033];
 
 // ================= state =================
-const S={mode:'idle',pos:null,heading:0,speed:0,dest:null,route:null,pref:'fast',muted:false,watch:null,sim:null,
+const S={mode:'idle',pos:null,heading:0,speed:0,points:[],pickRow:null,route:null,pref:'fast',muted:false,watch:null,sim:null,
   idx:0,s:0,offCount:0,lastReroute:0,spoken:{},cams:new Map(),camAlong:[],wake:null,rerouting:false,follow:true};
 
 // ================= helpers =================
@@ -139,7 +159,7 @@ function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','
 
 // ================= map =================
 const map=new maplibregl.Map({container:'map',style:MAP_STYLE,center:DEFAULT_CENTER,zoom:12,attributionControl:false,maxPitch:75,dragRotate:true});
-let userMarker=null,destMarker=null;
+let userMarker=null;
 const emptyFC={type:'FeatureCollection',features:[]};
 map.on('load',()=>{
   map.addSource('route',{type:'geojson',data:emptyFC});
@@ -154,11 +174,6 @@ function userEl(){const el=document.createElement('div');el.className='userMarke
 function setUserMarker(lng,lat,hd){
   if(!userMarker){userMarker=new maplibregl.Marker({element:userEl(),rotationAlignment:'map',pitchAlignment:'map'}).setLngLat([lng,lat]).addTo(map)}
   userMarker.setLngLat([lng,lat]).setRotation(hd||0);
-}
-function setDest(d){
-  S.dest=d;
-  if(destMarker){destMarker.remove();destMarker=null}
-  if(d){const el=document.createElement('div');el.className='destMarker';el.textContent='📍';destMarker=new maplibregl.Marker({element:el}).setLngLat([d.lon,d.lat]).addTo(map)}
 }
 function drawRoute(){
   if(!S.mapReady) return;
@@ -175,78 +190,218 @@ async function search(q){
   if(!r.ok) throw new Error('搜尋服務暫時無法使用');
   return r.json();
 }
-async function doSearch(){
-  const q=$('#q').value.trim(); if(!q) return;
-  const box=$('#results'); box.style.display='block'; box.innerHTML='<div>搜尋中…</div>';
+function resultToPoint(it){
+  const parts=it.display_name.split(',').map(s=>s.trim());
+  return {lat:+it.lat,lon:+it.lon,name:it.name||parts[0],addr:parts.slice(1,4).join(' ')};
+}
+function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}}
+
+// results dropdown, shared by the top search bar (row -1) and the planner rows
+function openResults(row,items){
+  const b=$('#results');
+  const rows=$('#plRows').children,el=row>=0&&rows[row];
+  b.style.top=(el?el.getBoundingClientRect().bottom+4:62)+'px';
+  b.style.display='block'; b.innerHTML='';
+  if(!items.length){b.innerHTML='<div>找不到結果</div>';return}
+  items.forEach(it=>{
+    const d=document.createElement('div');
+    d.innerHTML=`${esc(it.label)}${it.sub?`<small>${esc(it.sub)}</small>`:''}`;
+    d.onclick=()=>{b.style.display='none';it.fn&&it.fn()};
+    b.appendChild(d);
+  });
+}
+async function runSearch(row,q,onPick){
+  openResults(row,[{label:'搜尋中…'}]);
   try{
     const list=await search(q);
-    if(!list.length){box.innerHTML='<div>找不到結果</div>';return}
-    box.innerHTML='';
-    list.forEach(it=>{
-      const d=document.createElement('div');
-      const parts=it.display_name.split(',').map(s=>s.trim());
-      d.innerHTML=`${esc(it.name||parts[0])}<small>${esc(parts.slice(1,4).join(' ')) }</small>`;
-      d.onclick=()=>{box.style.display='none';$('#q').blur();pickDestination({lat:+it.lat,lon:+it.lon,name:it.name||parts[0],addr:parts.slice(1,4).join(' ')})};
-      box.appendChild(d);
-    });
-  }catch(e){box.innerHTML=`<div>${esc(e.message)}</div>`}
+    openResults(row,list.map(it=>{const p=resultToPoint(it);return {label:p.name,sub:p.addr,fn:()=>onPick(p)}}));
+  }catch(e){openResults(row,[{label:'搜尋失敗：'+e.message}])}
+}
+function doSearch(){
+  const q=$('#q').value.trim(); if(!q) return;
+  runSearch(-1,q,p=>{$('#q').blur();pickDestination(p)});
 }
 $('#btnGo').onclick=doSearch;
 $('#q').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doSearch()}});
-document.addEventListener('click',e=>{if(!e.target.closest('#results,#topbar'))$('#results').style.display='none'});
+document.addEventListener('click',e=>{if(!e.target.closest('#results,#topbar,#planner'))$('#results').style.display='none'});
 
-// long press / right click to choose a destination
+// long press / right click on the map: choose a destination (or fill the row being picked)
 (function(){
   let timer=null,start=null;
   const cancel=()=>{clearTimeout(timer);timer=null};
-  map.on('touchstart',e=>{if(e.originalEvent.touches&&e.originalEvent.touches.length>1)return;start=e.point;timer=setTimeout(()=>{pickDestination({lat:e.lngLat.lat,lon:e.lngLat.lng,name:'地圖上的位置',addr:`${e.lngLat.lat.toFixed(5)}, ${e.lngLat.lng.toFixed(5)}`})},650)});
+  const choose=ll=>{
+    const p={lat:ll.lat,lon:ll.lng,name:'地圖上的位置',addr:`${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`};
+    if(S.pickRow!=null){const i=S.pickRow;S.pickRow=null;setPoint(i,p);reverseName(p);return}
+    pickDestination(p).then(()=>reverseName(p));
+  };
+  map.on('touchstart',e=>{if(e.originalEvent.touches&&e.originalEvent.touches.length>1)return;start=e.point;timer=setTimeout(()=>choose(e.lngLat),650)});
   map.on('touchmove',e=>{if(start&&e.point.dist(start)>10)cancel()});
   map.on('touchend',cancel);map.on('touchcancel',cancel);map.on('dragstart',cancel);
-  map.on('contextmenu',e=>pickDestination({lat:e.lngLat.lat,lon:e.lngLat.lng,name:'地圖上的位置',addr:`${e.lngLat.lat.toFixed(5)}, ${e.lngLat.lng.toFixed(5)}`}));
+  map.on('contextmenu',e=>choose(e.lngLat));
+  // a plain tap fills the row chosen with the 📌 button
+  map.on('click',e=>{
+    if(S.pickRow==null) return;
+    const i=S.pickRow;S.pickRow=null;
+    const p={lat:e.lngLat.lat,lon:e.lngLat.lng,name:'地圖上的位置',addr:`${e.lngLat.lat.toFixed(5)}, ${e.lngLat.lng.toFixed(5)}`};
+    setPoint(i,p);reverseName(p);
+  });
 })();
+// give a dropped pin a readable name (Nominatim reverse geocoding)
+async function reverseName(p){
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=zh-TW&lat=${p.lat}&lon=${p.lon}`);
+    if(!r.ok) return; const j=await r.json();
+    const name=j.name||(j.display_name||'').split(',')[0];
+    if(name&&S.points.includes(p)){p.name=name;p.addr=(j.display_name||'').split(',').slice(1,4).join(' ').trim();renderPlanner();updateTitle()}
+  }catch(e){}
+}
+
+// ================= planner: origin, stops, destination =================
+// S.points = [origin, ...stops, destination]; a point is {lat,lon,name,addr,me?} or {empty:true}
+let markers=[];
+const ptSet=p=>!!p&&!p.empty&&p.lat!=null;
+function markerEl(kind,label){
+  const el=document.createElement('div');
+  if(kind==='dest'){el.className='destMarker';el.textContent='📍'}
+  else{el.className='stopMarker '+kind;el.textContent=label}
+  return el;
+}
+function renderMarkers(){
+  markers.forEach(m=>m.remove());markers=[];
+  const n=S.points.length;
+  S.points.forEach((p,i)=>{
+    if(!ptSet(p)) return;
+    let el;
+    if(i===n-1&&n>1) el=markerEl('dest');
+    else if(i===0){if(p.me) return;el=markerEl('org','起')}
+    else el=markerEl('stop',String(i));
+    markers.push(new maplibregl.Marker({element:el}).setLngLat([p.lon,p.lat]).addTo(map));
+  });
+}
+function openPlanner(){$('#planner').style.display='block';$('#topbar').style.display='none';renderPlanner()}
+function closePlanner(){$('#planner').style.display='none';$('#results').style.display='none'}
+function renderPlanner(){
+  const box=$('#plRows'),n=S.points.length;
+  const focused=document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.row;
+  box.innerHTML='';
+  S.points.forEach((p,i)=>{
+    const kind=i===0?'org':i===n-1?'dest':'stop';
+    const label=kind==='org'?'起點':kind==='dest'?'終點':'中途點 '+i;
+    const row=document.createElement('div');row.className='plRow';
+    row.innerHTML=`<span class="plIcon ${kind}">${kind==='org'?'●':kind==='dest'?'📍':i}</span>`+
+      `<input data-row="${i}" placeholder="${label}" autocomplete="off" enterkeyhint="search">`+
+      `<button class="mini" data-a="pick" title="在地圖上選點">📌</button>`+
+      (kind==='stop'?`<button class="mini" data-a="up" title="上移">↑</button><button class="mini" data-a="down" title="下移">↓</button><button class="mini" data-a="del" title="移除">✕</button>`:'');
+    const inp=row.querySelector('input');
+    inp.value=ptSet(p)?(p.me?'我的位置':p.name):'';
+    inp.onfocus=()=>{inp.select();openResults(i,defaultItems(i))};
+    inp.oninput=debounce(()=>{const q=inp.value.trim();q?(q.length>=2&&runSearch(i,q,pt=>setPoint(i,pt))):openResults(i,defaultItems(i))},450);
+    inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const q=inp.value.trim();if(q)runSearch(i,q,pt=>setPoint(i,pt))}};
+    row.querySelectorAll('button').forEach(b=>b.onclick=()=>rowAction(i,b.dataset.a));
+    box.appendChild(row);
+  });
+  if(focused!=null&&box.children[focused]&&document.activeElement===document.body){/* keep focus only if the user was typing */}
+}
+function defaultItems(i){
+  return [
+    {label:'📍 我的位置',sub:S.pos?'使用目前定位':'尚未取得定位',fn:()=>{if(!S.pos){toast('尚未取得定位，請允許位置權限');return}setPoint(i,{me:true,name:'我的位置',lat:S.pos.lat,lon:S.pos.lon})}},
+    {label:'🗺 在地圖上選點',sub:'接著點一下地圖上的位置',fn:()=>startPick(i)}
+  ];
+}
+function startPick(i){S.pickRow=i;toast('請點一下地圖上的位置',3500)}
+function setPoint(i,p){S.points[i]=p;renderPlanner();renderMarkers();replan();if(ptSet(p))map.easeTo({center:[p.lon,p.lat],duration:500})}
+function rowAction(i,a){
+  const n=S.points.length;
+  if(a==='pick') return startPick(i);
+  if(a==='del'){S.points.splice(i,1)}
+  else if(a==='up'&&i-1>=1){[S.points[i-1],S.points[i]]=[S.points[i],S.points[i-1]]}
+  else if(a==='down'&&i+1<=n-2){[S.points[i+1],S.points[i]]=[S.points[i],S.points[i+1]]}
+  renderPlanner();renderMarkers();replan();
+}
+$('#btnAddStop').onclick=()=>{
+  if(S.points.length>=9){toast('最多 7 個中途點');return}
+  S.points.splice(S.points.length-1,0,{empty:true});
+  renderPlanner();renderMarkers();replan();
+  const inp=$('#plRows').children[S.points.length-2].querySelector('input');inp.focus();
+};
+$('#btnSwap').onclick=()=>{S.points.reverse();renderPlanner();renderMarkers();replan()};
+function resetPlan(){
+  S.points=[];S.route=null;S.pickRow=null;renderMarkers();drawRoute();closePlanner();
+  $('#sheet').style.display='none';$('#topbar').style.display='flex';S.mode='idle';
+}
+$('#btnPlanClose').onclick=()=>{endNav(true);resetPlan()};
 
 // ================= routing =================
-function originPoint(){
-  if(S.pos) return {lat:S.pos.lat,lon:S.pos.lon};
-  const c=map.getCenter(); toast('尚未取得定位，改以地圖中心為起點'); return {lat:c.lat,lon:c.lng};
-}
-async function fetchRoute(from,to){
+async function fetchRoute(points){
   const co={use_highways:1,use_tolls:1};
   if(S.pref==='notoll') co.use_tolls=0;
   if(S.pref==='nohighway'){co.use_highways=0}
-  const body={locations:[{lat:from.lat,lon:from.lon,type:'break'},{lat:to.lat,lon:to.lon,type:'break'}],costing:'auto',costing_options:{auto:co},directions_options:{units:'kilometers',language:'zh-CN'}};
+  const pts2=points.map((p,i)=>i===0&&p.me&&S.pos?Object.assign({},p,{lat:S.pos.lat,lon:S.pos.lon}):p);
+  const body={locations:pts2.map(p=>({lat:p.lat,lon:p.lon,type:'break'})),costing:'auto',costing_options:{auto:co},directions_options:{units:'kilometers',language:'zh-CN'}};
   const r=await fetch(VALHALLA,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const j=await r.json();
   if(!r.ok||!j.trip) throw new Error((j&&j.error)||'無法規劃路線');
-  const leg=j.trip.legs[0], pts=decode(leg.shape);
+  // join the legs (one per pair of consecutive points) into a single polyline and maneuver list
+  let pts=[],maneuvers=[],tollAny=false;const L=j.trip.legs.length;
+  j.trip.legs.forEach((leg,li)=>{
+    const lp=decode(leg.shape),base=pts.length?pts.length-1:0;
+    pts=pts.length?pts.concat(lp.slice(1)):lp;
+    leg.maneuvers.forEach((m,mi)=>{
+      if(li>0&&mi===0) return; // the "start" of a later leg: that stop was already announced as an arrival
+      const mm=Object.assign({},m,{begin_shape_index:m.begin_shape_index+base,end_shape_index:m.end_shape_index+base});
+      if(li<L-1&&[4,5,6].includes(m.type)) mm.waypoint=li+1;
+      if(m.toll) tollAny=true;
+      maneuvers.push(mm);
+    });
+  });
   const cum=[0];for(let i=1;i<pts.length;i++)cum.push(cum[i-1]+hav(pts[i-1],pts[i]));
-  return {pts,cum,maneuvers:leg.maneuvers,length:cum[cum.length-1],time:j.trip.summary.time,tollAny:leg.maneuvers.some(m=>m.toll)};
+  return {pts,cum,maneuvers,length:cum[cum.length-1],time:j.trip.summary.time,tollAny,points:pts2};
+}
+function nm(p){return p?(p.me?'我的位置':p.name||'未命名'):''}
+function updateTitle(){
+  const n=S.points.length;if(n<2) return;
+  $('#shTitle').textContent=`${nm(S.points[0])} → ${nm(S.points[n-1])}`;
 }
 async function pickDestination(d){
-  setDest(d); endNav(true);
+  endNav(true);
+  if(S.mode!=='preview'||S.points.length<2){
+    S.points=[S.pos?{me:true,name:'我的位置',lat:S.pos.lat,lon:S.pos.lon}:{empty:true},d];
+  }else S.points[S.points.length-1]=d;
   S.mode='preview';
-  $('#shTitle').textContent=d.name; $('#shSub').textContent='規劃路線中…'; $('#sheet').style.display='block';
-  $('#btnStart').disabled=$('#btnSim').disabled=true;
-  await planRoute();
+  openPlanner();renderMarkers();$('#sheet').style.display='block';
+  await replan();
 }
-async function planRoute(){
+let planSeq=0;
+async function replan(){
+  const sheetBtns=(on)=>{$('#btnStart').disabled=$('#btnSim').disabled=!on};
+  updateTitle();
+  if(!S.points.every(ptSet)){
+    $('#shSub').textContent='請把起點、中途點與終點都填好';sheetBtns(false);
+    S.route=null;drawRoute();return;
+  }
+  const seq=++planSeq;
+  $('#shSub').textContent='規劃路線中…';sheetBtns(false);
   try{
-    const from=originPoint();
-    S.originAtPlan=from;
-    const rt=await fetchRoute(from,S.dest);
-    S.route=rt; resetProgress(); drawRoute();
-    $('#shSub').textContent=`${fmtDist(rt.length)} · 約 ${fmtDur(rt.time)}${rt.tollAny?' · 含收費路段':''}`;
-    $('#btnStart').disabled=$('#btnSim').disabled=false;
+    const rt=await fetchRoute(S.points);
+    if(seq!==planSeq) return;
+    S.route=rt;resetProgress();drawRoute();
+    const stops=S.points.length-2;
+    $('#shSub').textContent=`${fmtDist(rt.length)} · 約 ${fmtDur(rt.time)}${stops?` · ${stops} 個中途點`:''}${rt.tollAny?' · 含收費路段':''}`;
+    sheetBtns(true);
     const b=rt.pts.reduce((a,p)=>a.extend(p),new maplibregl.LngLatBounds(rt.pts[0],rt.pts[0]));
-    map.fitBounds(b,{padding:{top:90,bottom:230,left:40,right:40},duration:700});
+    const top=$('#planner').offsetHeight+30;
+    map.fitBounds(b,{padding:{top,bottom:230,left:40,right:40},duration:700});
     ensureCameras(0);
-  }catch(e){$('#shSub').textContent='路線規劃失敗：'+e.message;S.route=null;drawRoute()}
+  }catch(e){
+    if(seq!==planSeq) return;
+    $('#shSub').textContent='路線規劃失敗：'+e.message;S.route=null;drawRoute();
+  }
 }
-document.querySelectorAll('#prefs button').forEach(b=>b.onclick=async()=>{
+document.querySelectorAll('#prefs button').forEach(b=>b.onclick=()=>{
   S.pref=b.dataset.pref;document.querySelectorAll('#prefs button').forEach(x=>x.classList.toggle('sel',x===b));
-  if(S.dest&&S.mode==='preview'){$('#shSub').textContent='重新規劃中…';$('#btnStart').disabled=$('#btnSim').disabled=true;await planRoute()}
+  if(S.mode==='preview') replan();
 });
-$('#btnCancel').onclick=()=>{endNav(true);setDest(null);S.route=null;drawRoute();$('#sheet').style.display='none';S.mode='idle'};
+$('#btnCancel').onclick=()=>{endNav(true);resetPlan()};
 
 // ================= instructions =================
 const MAN={1:['↑','出發'],2:['↑','出發'],3:['↑','出發'],4:['⚑','抵達目的地'],5:['⚑','抵達目的地，目的地在右側'],6:['⚑','抵達目的地，目的地在左側'],
@@ -261,6 +416,10 @@ function signInfo(m){
   return {num,name,branch:br,toward:to};
 }
 function describe(m){
+  if(m.waypoint){
+    const p=S.route&&S.route.points&&S.route.points[m.waypoint];
+    return {icon:'⚑',verb:'抵達中途點',text:`抵達中途點 ${m.waypoint}${p&&p.name?'：'+p.name:''}`,sign:null,street:''};
+  }
   const [icon,verb]=MAN[m.type]||['↑','前進'];
   const street=(m.street_names||[]).join('、');
   const sg=signInfo(m);
@@ -411,7 +570,7 @@ const NAV_PAD=()=>({top:Math.round(innerHeight*.42),bottom:60,left:0,right:0});
 function startNav(sim){
   if(!S.route) return;
   S.mode='nav'; S.simMode=!!sim; resetProgress();
-  $('#sheet').style.display='none';$('#topbar').style.display='none';$('#results').style.display='none';
+  $('#sheet').style.display='none';$('#topbar').style.display='none';closePlanner();
   $('#navBanner').style.display='block';$('#navBar').style.display='flex';$('#speedBox').style.display='flex';$('#btnMute').style.display='block';
   $('#fab').style.bottom='calc(110px + var(--safe-b))';
   S.follow=true;
@@ -429,16 +588,22 @@ function endNav(silent){
   if(S.mode==='nav'){
     if(!silent&&'speechSynthesis' in window)speechSynthesis.cancel();
     $('#navBanner').style.display='none';$('#navBar').style.display='none';$('#speedBox').style.display='none';$('#btnMute').style.display='none';
-    $('#camAlert').style.display='none';$('#junction').style.display='none';$('#topbar').style.display='flex';
+    $('#camAlert').style.display='none';$('#junction').style.display='none';
     map.easeTo({pitch:0,bearing:0,padding:{top:0,bottom:0,left:0,right:0},duration:600});
     if(S.wake){try{S.wake.release()}catch(e){}S.wake=null}
-    S.mode=S.dest&&S.route?'preview':'idle';
-    if(S.mode==='preview'){$('#sheet').style.display='block'}
+    S.mode=S.points.length>1&&S.route?'preview':'idle';
+    if(S.mode==='preview'){$('#sheet').style.display='block';$('#planner').style.display='block'}
+    else $('#topbar').style.display='flex';
   }
 }
-$('#btnStart').onclick=()=>{S.simMode=false;startNav(false)};
+$('#btnStart').onclick=()=>{
+  S.simMode=false;
+  const o=S.points[0];
+  if(o&&!o.me&&S.pos&&hav([o.lon,o.lat],[S.pos.lon,S.pos.lat])>300) toast('起點不是你目前的位置：導航會改從你的位置出發，並保留中途點',5000);
+  startNav(false);
+};
 $('#btnSim').onclick=()=>startNav(true);
-$('#btnEnd').onclick=()=>{endNav();setDest(null);S.route=null;drawRoute();$('#sheet').style.display='none';S.mode='idle'};
+$('#btnEnd').onclick=()=>{endNav();resetPlan()};
 
 function onPosition(p){
   S.pos=p;
@@ -499,7 +664,10 @@ async function reroute(){
   S.rerouting=true;S.lastReroute=Date.now();
   toast('偏離路線，重新規劃…');speak('偏離路線，重新規劃路線',true);
   try{
-    const rt=await fetchRoute({lat:S.pos.lat,lon:S.pos.lon},S.dest);
+    // keep only the stops not reached yet, starting from where the car is now
+    const old=S.route,passed=old.maneuvers.filter(m=>m.waypoint&&maneuverStartS(m)<=S.s+10).length;
+    const rest=old.points.slice(passed+1);
+    const rt=await fetchRoute([{lat:S.pos.lat,lon:S.pos.lon,name:'目前位置'},...rest]);
     S.route=rt;resetProgress();drawRoute();ensureCameras(0);
   }catch(e){toast('重新規劃失敗：'+e.message)}
   S.rerouting=false;
@@ -556,7 +724,7 @@ gpsStart();
 if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')){
   navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
-window.__navi={S,map,startNav,pickDestination,onPosition,describe};
+window.__navi={S,map,startNav,pickDestination,onPosition,describe,setPoint,replan};
 })();
 </script>
 </body>
