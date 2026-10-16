@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>路路通導航</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.css">
+<style>
+:root{--blue:#1d4ed8;--ink:#111827;--muted:#6b7280;--panel:#fff;--line:#e5e7eb;--green:#0f7a3d;--red:#dc2626;--safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;overflow:hidden;background:#e5e7eb;color:var(--ink);font:15px/1.4 system-ui,"Segoe UI","Microsoft JhengHei","PingFang TC",sans-serif}
+#map{position:absolute;inset:0}
+button{font:inherit;color:inherit;border:0;border-radius:12px;padding:10px 14px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25);cursor:pointer}
+button.primary{background:var(--blue);color:#fff}
+button.danger{background:var(--red);color:#fff}
+button.sel{outline:2px solid var(--blue)}
+#topbar{position:absolute;left:10px;right:10px;top:calc(10px + var(--safe-t));display:flex;gap:8px;z-index:5}
+#q{flex:1;min-width:0;border:0;border-radius:12px;padding:12px 14px;font:inherit;box-shadow:0 1px 6px rgba(0,0,0,.3);background:#fff;color:var(--ink)}
+#results{position:absolute;left:10px;right:10px;top:calc(62px + var(--safe-t));background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.3);z-index:5;max-height:45vh;overflow:auto;display:none}
+#results div{padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+#results div:last-child{border:0}
+#results small{display:block;color:var(--muted)}
+#sheet{position:absolute;left:0;right:0;bottom:0;background:var(--panel);border-radius:18px 18px 0 0;box-shadow:0 -2px 12px rgba(0,0,0,.25);padding:14px 14px calc(14px + var(--safe-b));z-index:5;display:none}
+#sheet .title{font-weight:700;font-size:17px}
+#sheet .sub{color:var(--muted);margin:2px 0 10px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row>button{flex:1;min-width:0}
+#prefs button{padding:7px 10px;font-size:13px;box-shadow:none;border:1px solid var(--line)}
+#prefs button.sel{border-color:var(--blue);outline:0;background:#eff6ff;color:var(--blue)}
+#navBanner{position:absolute;left:8px;right:8px;top:calc(8px + var(--safe-t));background:var(--green);color:#fff;border-radius:16px;padding:10px 14px;z-index:6;display:none;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+#navBanner .r1{display:flex;align-items:center;gap:12px}
+#navBanner .ico{font-size:44px;line-height:1;width:54px;text-align:center}
+#navBanner .dist{font-size:28px;font-weight:800;line-height:1.1}
+#navBanner .txt{font-size:16px;opacity:.95}
+#sign{margin-top:8px;background:#0b6b3a;border:2px solid #fff;border-radius:8px;padding:6px 10px;font-weight:700;display:none}
+#sign small{display:block;font-weight:400;opacity:.9}
+#camAlert{position:absolute;left:8px;right:8px;top:calc(150px + var(--safe-t));background:#f59e0b;color:#111;border-radius:14px;padding:8px 14px;font-weight:700;z-index:6;display:none;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+#camAlert.over{background:var(--red);color:#fff;animation:blink .5s infinite alternate}
+@keyframes blink{to{opacity:.6}}
+#junction{position:absolute;left:8px;width:min(46vw,260px);height:min(34vh,230px);top:calc(150px + var(--safe-t));border-radius:14px;overflow:hidden;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.4);z-index:5;display:none;background:#cbd5e1}
+#jmap{position:absolute;inset:0}
+#jlabel{position:absolute;left:0;right:0;bottom:0;background:rgba(15,122,61,.95);color:#fff;font-size:12px;padding:3px 8px;font-weight:700}
+#speedBox{position:absolute;left:8px;bottom:calc(96px + var(--safe-b));z-index:5;display:none;gap:8px;flex-direction:column;align-items:flex-end}
+#speed{width:70px;height:70px;border-radius:50%;background:#fff;border:4px solid #111;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:24px;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+#speed small{font-size:11px;font-weight:600;color:var(--muted)}
+#speed.over{border-color:var(--red);color:var(--red)}
+#navBar{position:absolute;left:0;right:0;bottom:0;background:var(--panel);padding:10px 14px calc(10px + var(--safe-b));z-index:5;display:none;align-items:center;gap:10px;box-shadow:0 -2px 10px rgba(0,0,0,.25);border-radius:16px 16px 0 0}
+#navBar .info{flex:1;min-width:0}
+#navBar .big{font-weight:800;font-size:20px}
+#navBar .sm{color:var(--muted);font-size:13px}
+#fab{position:absolute;right:10px;bottom:calc(110px + var(--safe-b));z-index:5;display:flex;flex-direction:column;gap:8px}
+#fab button{width:46px;height:46px;padding:0;font-size:20px}
+#toast{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(120px + var(--safe-b));background:#111827;color:#fff;padding:8px 14px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;max-width:88vw;text-align:center}
+#toast.show{opacity:.95}
+#attr{position:absolute;left:6px;bottom:calc(2px + var(--safe-b));z-index:7;font-size:10px;color:#374151;text-shadow:0 0 3px #fff,0 0 3px #fff;pointer-events:none}
+.userMarker{width:34px;height:34px}
+.destMarker{font-size:30px;line-height:1;margin-top:-26px}
+.camMarker{width:12px;height:12px;border-radius:50%;background:#ef4444;border:2px solid #fff;box-shadow:0 0 0 1px #991b1b}
+.maplibregl-ctrl-bottom-right,.maplibregl-ctrl-bottom-left{display:none}
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div id="topbar">
+  <input id="q" type="search" placeholder="搜尋地點或地址" enterkeyhint="search" autocomplete="off">
+  <button id="btnGo" class="primary">搜尋</button>
+</div>
+<div id="results"></div>
+
+<div id="navBanner">
+  <div class="r1"><div class="ico" id="nbIcon">↑</div><div><div class="dist" id="nbDist">--</div><div class="txt" id="nbText">--</div></div></div>
+  <div id="sign"></div>
+</div>
+<div id="camAlert"><span style="font-size:22px">📷</span><span id="camText"></span></div>
+<div id="junction"><div id="jmap"></div><div id="jlabel">路口放大圖</div></div>
+
+<div id="speedBox"><div id="speed"><span id="spd">0</span><small id="lim">km/h</small></div></div>
+
+<div id="fab">
+  <button id="btnLocate" title="回到目前位置">⌖</button>
+  <button id="btnMute" title="語音" style="display:none">🔊</button>
+</div>
+
+<div id="sheet">
+  <div class="title" id="shTitle"></div>
+  <div class="sub" id="shSub"></div>
+  <div class="row" id="prefs" style="margin-bottom:10px">
+    <button data-pref="fast" class="sel">最快</button>
+    <button data-pref="notoll">少收費</button>
+    <button data-pref="nohighway">避開高速</button>
+  </div>
+  <div class="row">
+    <button id="btnCancel">取消</button>
+    <button id="btnSim">模擬行駛</button>
+    <button id="btnStart" class="primary">開始導航</button>
+  </div>
+</div>
+
+<div id="navBar">
+  <div class="info"><div class="big" id="nbRemain">--</div><div class="sm" id="nbEta">--</div></div>
+  <button id="btnEnd" class="danger">結束</button>
+</div>
+<div id="attr">© OpenStreetMap 貢獻者 · 測速資料：內政部警政署</div>
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.js"></script>
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+if(!window.maplibregl){document.body.insertAdjacentHTML('afterbegin','<p style="position:relative;z-index:99;padding:16px;background:#fff;color:#dc2626">無法載入地圖函式庫，請確認網路連線。</p>');return}
+
+// ================= config =================
+const VALHALLA='https://valhalla1.openstreetmap.de/route';
+const NOMINATIM='https://nominatim.openstreetmap.org/search';
+const MAP_STYLE={version:8,sources:{osm:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,maxzoom:19,attribution:'© OpenStreetMap contributors'}},layers:[{id:'osm',type:'raster',source:'osm'}]};
+const DEFAULT_CENTER=[121.5654,25.033];
+
+// ================= state =================
+const S={mode:'idle',pos:null,heading:0,speed:0,dest:null,route:null,pref:'fast',muted:false,watch:null,sim:null,
+  idx:0,s:0,offCount:0,lastReroute:0,spoken:{},cams:new Map(),camAlong:[],wake:null,rerouting:false,follow:true};
+
+// ================= helpers =================
+function toast(m,ms=2800){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),ms)}
+const R=6371008.8, rad=d=>d*Math.PI/180, deg=r=>r*180/Math.PI;
+function hav(a,b){const dLat=rad(b[1]-a[1]),dLon=rad(b[0]-a[0]);const x=Math.sin(dLat/2)**2+Math.cos(rad(a[1]))*Math.cos(rad(b[1]))*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+function bearing(a,b){const y=Math.sin(rad(b[0]-a[0]))*Math.cos(rad(b[1]));const x=Math.cos(rad(a[1]))*Math.sin(rad(b[1]))-Math.sin(rad(a[1]))*Math.cos(rad(b[1]))*Math.cos(rad(b[0]-a[0]));return (deg(Math.atan2(y,x))+360)%360}
+function decode(str,prec=6){let i=0,lat=0,lon=0,pts=[],f=Math.pow(10,prec);while(i<str.length){let b,sh=0,r=0;do{b=str.charCodeAt(i++)-63;r|=(b&31)<<sh;sh+=5}while(b>=32);lat+=(r&1)?~(r>>1):(r>>1);sh=0;r=0;do{b=str.charCodeAt(i++)-63;r|=(b&31)<<sh;sh+=5}while(b>=32);lon+=(r&1)?~(r>>1):(r>>1);pts.push([lon/f,lat/f])}return pts}
+// project point p onto segment a-b (local equirectangular), returns {t,dist(m)}
+function projSeg(p,a,b){const k=Math.cos(rad(p[1])),m=111320;const ax=(a[0]-p[0])*k*m,ay=(a[1]-p[1])*m,bx=(b[0]-p[0])*k*m,by=(b[1]-p[1])*m;const dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy;let t=l2?(-(ax*dx+ay*dy))/l2:0;t=Math.max(0,Math.min(1,t));const x=ax+t*dx,y=ay+t*dy;return {t,dist:Math.hypot(x,y)}}
+function fmtDist(m){return m<1000?`${Math.max(10,Math.round(m/10)*10)} 公尺`:`${(m/1000).toFixed(m<10000?1:0)} 公里`}
+function fmtDur(sec){const m=Math.round(sec/60);return m<60?`${m} 分鐘`:`${Math.floor(m/60)} 小時 ${m%60} 分`}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+// ================= map =================
+const map=new maplibregl.Map({container:'map',style:MAP_STYLE,center:DEFAULT_CENTER,zoom:12,attributionControl:false,maxPitch:75,dragRotate:true});
+let userMarker=null,destMarker=null;
+const emptyFC={type:'FeatureCollection',features:[]};
+map.on('load',()=>{
+  map.addSource('route',{type:'geojson',data:emptyFC});
+  map.addLayer({id:'route-casing',type:'line',source:'route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#0b3a9e','line-width':['interpolate',['linear'],['zoom'],8,6,16,16]}});
+  map.addLayer({id:'route-line',type:'line',source:'route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#3b82f6','line-width':['interpolate',['linear'],['zoom'],8,4,16,11]}});
+  map.addSource('cams',{type:'geojson',data:emptyFC});
+  map.addLayer({id:'cams',type:'circle',source:'cams',minzoom:11,paint:{'circle-radius':['interpolate',['linear'],['zoom'],11,4,17,9],'circle-color':'#ef4444','circle-stroke-color':'#fff','circle-stroke-width':2}});
+  S.mapReady=true; if(S.route) drawRoute();
+  refreshCamLayer();
+});
+function userEl(){const el=document.createElement('div');el.className='userMarker';el.innerHTML='<svg viewBox="0 0 34 34"><circle cx="17" cy="17" r="15" fill="rgba(37,99,235,.18)"/><path d="M17 4 L27 28 L17 22 L7 28 Z" fill="#1d4ed8" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/></svg>';return el}
+function setUserMarker(lng,lat,hd){
+  if(!userMarker){userMarker=new maplibregl.Marker({element:userEl(),rotationAlignment:'map',pitchAlignment:'map'}).setLngLat([lng,lat]).addTo(map)}
+  userMarker.setLngLat([lng,lat]).setRotation(hd||0);
+}
+function setDest(d){
+  S.dest=d;
+  if(destMarker){destMarker.remove();destMarker=null}
+  if(d){const el=document.createElement('div');el.className='destMarker';el.textContent='📍';destMarker=new maplibregl.Marker({element:el}).setLngLat([d.lon,d.lat]).addTo(map)}
+}
+function drawRoute(){
+  if(!S.mapReady) return;
+  const fc=S.route?{type:'FeatureCollection',features:[{type:'Feature',geometry:{type:'LineString',coordinates:S.route.pts},properties:{}}]}:emptyFC;
+  map.getSource('route').setData(fc);
+  if(S.jmap&&S.jmapReady) S.jmap.getSource('route').setData(fc);
+}
+
+// ================= search =================
+async function search(q){
+  const c=map.getCenter();
+  const url=`${NOMINATIM}?format=jsonv2&limit=6&accept-language=zh-TW&countrycodes=tw&q=${encodeURIComponent(q)}&viewbox=${c.lng-1},${c.lat+1},${c.lng+1},${c.lat-1}`;
+  const r=await fetch(url,{headers:{'Accept':'application/json'}});
+  if(!r.ok) throw new Error('搜尋服務暫時無法使用');
+  return r.json();
+}
+async function doSearch(){
+  const q=$('#q').value.trim(); if(!q) return;
+  const box=$('#results'); box.style.display='block'; box.innerHTML='<div>搜尋中…</div>';
+  try{
+    const list=await search(q);
+    if(!list.length){box.innerHTML='<div>找不到結果</div>';return}
+    box.innerHTML='';
+    list.forEach(it=>{
+      const d=document.createElement('div');
+      const parts=it.display_name.split(',').map(s=>s.trim());
+      d.innerHTML=`${esc(it.name||parts[0])}<small>${esc(parts.slice(1,4).join(' ')) }</small>`;
+      d.onclick=()=>{box.style.display='none';$('#q').blur();pickDestination({lat:+it.lat,lon:+it.lon,name:it.name||parts[0],addr:parts.slice(1,4).join(' ')})};
+      box.appendChild(d);
+    });
+  }catch(e){box.innerHTML=`<div>${esc(e.message)}</div>`}
+}
+$('#btnGo').onclick=doSearch;
+$('#q').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doSearch()}});
+document.addEventListener('click',e=>{if(!e.target.closest('#results,#topbar'))$('#results').style.display='none'});
+
+// long press / right click to choose a destination
+(function(){
+  let timer=null,start=null;
+  const cancel=()=>{clearTimeout(timer);timer=null};
+  map.on('touchstart',e=>{if(e.originalEvent.touches&&e.originalEvent.touches.length>1)return;start=e.point;timer=setTimeout(()=>{pickDestination({lat:e.lngLat.lat,lon:e.lngLat.lng,name:'地圖上的位置',addr:`${e.lngLat.lat.toFixed(5)}, ${e.lngLat.lng.toFixed(5)}`})},650)});
+  map.on('touchmove',e=>{if(start&&e.point.dist(start)>10)cancel()});
+  map.on('touchend',cancel);map.on('touchcancel',cancel);map.on('dragstart',cancel);
+  map.on('contextmenu',e=>pickDestination({lat:e.lngLat.lat,lon:e.lngLat.lng,name:'地圖上的位置',addr:`${e.lngLat.lat.toFixed(5)}, ${e.lngLat.lng.toFixed(5)}`}));
+})();
+
+// ================= routing =================
+function originPoint(){
+  if(S.pos) return {lat:S.pos.lat,lon:S.pos.lon};
+  const c=map.getCenter(); toast('尚未取得定位，改以地圖中心為起點'); return {lat:c.lat,lon:c.lng};
+}
+async function fetchRoute(from,to){
+  const co={use_highways:1,use_tolls:1};
+  if(S.pref==='notoll') co.use_tolls=0;
+  if(S.pref==='nohighway'){co.use_highways=0}
+  const body={locations:[{lat:from.lat,lon:from.lon,type:'break'},{lat:to.lat,lon:to.lon,type:'break'}],costing:'auto',costing_options:{auto:co},directions_options:{units:'kilometers',language:'zh-CN'}};
+  const r=await fetch(VALHALLA,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const j=await r.json();
+  if(!r.ok||!j.trip) throw new Error((j&&j.error)||'無法規劃路線');
+  const leg=j.trip.legs[0], pts=decode(leg.shape);
+  const cum=[0];for(let i=1;i<pts.length;i++)cum.push(cum[i-1]+hav(pts[i-1],pts[i]));
+  return {pts,cum,maneuvers:leg.maneuvers,length:cum[cum.length-1],time:j.trip.summary.time,tollAny:leg.maneuvers.some(m=>m.toll)};
+}
+async function pickDestination(d){
+  setDest(d); endNav(true);
+  S.mode='preview';
+  $('#shTitle').textContent=d.name; $('#shSub').textContent='規劃路線中…'; $('#sheet').style.display='block';
+  $('#btnStart').disabled=$('#btnSim').disabled=true;
+  await planRoute();
+}
+async function planRoute(){
+  try{
+    const from=originPoint();
+    S.originAtPlan=from;
+    const rt=await fetchRoute(from,S.dest);
+    S.route=rt; resetProgress(); drawRoute();
+    $('#shSub').textContent=`${fmtDist(rt.length)} · 約 ${fmtDur(rt.time)}${rt.tollAny?' · 含收費路段':''}`;
+    $('#btnStart').disabled=$('#btnSim').disabled=false;
+    const b=rt.pts.reduce((a,p)=>a.extend(p),new maplibregl.LngLatBounds(rt.pts[0],rt.pts[0]));
+    map.fitBounds(b,{padding:{top:90,bottom:230,left:40,right:40},duration:700});
+    ensureCameras(0);
+  }catch(e){$('#shSub').textContent='路線規劃失敗：'+e.message;S.route=null;drawRoute()}
+}
+document.querySelectorAll('#prefs button').forEach(b=>b.onclick=async()=>{
+  S.pref=b.dataset.pref;document.querySelectorAll('#prefs button').forEach(x=>x.classList.toggle('sel',x===b));
+  if(S.dest&&S.mode==='preview'){$('#shSub').textContent='重新規劃中…';$('#btnStart').disabled=$('#btnSim').disabled=true;await planRoute()}
+});
+$('#btnCancel').onclick=()=>{endNav(true);setDest(null);S.route=null;drawRoute();$('#sheet').style.display='none';S.mode='idle'};
+
+// ================= instructions =================
+const MAN={1:['↑','出發'],2:['↑','出發'],3:['↑','出發'],4:['⚑','抵達目的地'],5:['⚑','抵達目的地，目的地在右側'],6:['⚑','抵達目的地，目的地在左側'],
+ 7:['↑','直行'],8:['↑','直行'],9:['↗','稍微右轉'],10:['↱','右轉'],11:['↘','大幅右轉'],12:['↷','向右迴轉'],13:['↶','向左迴轉'],14:['↙','大幅左轉'],15:['↰','左轉'],16:['↖','稍微左轉'],
+ 17:['↑','直行進入匝道'],18:['↱','靠右進入匝道'],19:['↰','靠左進入匝道'],20:['⇗','由右側出口駛出'],21:['⇖','由左側出口駛出'],22:['↑','保持直行'],23:['↗','靠右行駛'],24:['↖','靠左行駛'],
+ 25:['⤵','匯入車道'],26:['⟳','進入圓環'],27:['⟳','駛出圓環'],28:['⛴','搭乘渡輪'],29:['⛴','離開渡輪'],37:['↗','向右匯入'],38:['↖','向左匯入']};
+function signInfo(m){
+  const sg=m.sign; if(!sg) return null;
+  const j=a=>(a||[]).map(x=>x.text).join('、');
+  const num=j(sg.exit_number_elements),name=j(sg.exit_name_elements),br=j(sg.exit_branch_elements),to=j(sg.exit_toward_elements);
+  if(!num&&!name&&!br&&!to) return null;
+  return {num,name,branch:br,toward:to};
+}
+function describe(m){
+  const [icon,verb]=MAN[m.type]||['↑','前進'];
+  const street=(m.street_names||[]).join('、');
+  const sg=signInfo(m);
+  let text=verb;
+  if(m.type===26&&m.roundabout_exit_count) text=`進入圓環，由第 ${m.roundabout_exit_count} 個出口駛出`;
+  const exitTypes=[17,18,19,20,21,23,24,22,37,38,25];
+  if(sg&&exitTypes.includes(m.type)){
+    const bits=[];
+    if(sg.num) bits.push(`${sg.num} 出口`); if(sg.name) bits.push(sg.name); if(sg.branch&&!sg.num) bits.push(sg.branch);
+    if(bits.length) text+='，'+bits.join(' ');
+    if(sg.toward) text+='，往'+sg.toward;
+  }else if(street&&![4,5,6].includes(m.type)){
+    text+=([1,2,3,7,8,22].includes(m.type)?'，沿':'，進入')+street;
+  }
+  return {icon,verb,text,sign:sg,street};
+}
+function isJunctionLike(m){return [17,18,19,20,21,22,23,24,25,26,37,38].includes(m.type)||!!signInfo(m)}
+
+// ================= progress along route =================
+function resetProgress(){S.idx=0;S.s=0;S.spoken={};S.offCount=0;S.camAlong=[];if(S.route)rebuildCamAlong()}
+function locate(p){
+  const pts=S.route.pts,cum=S.route.cum,n=pts.length-1;
+  const scan=(lo,hi)=>{let best=null;for(let i=lo;i<hi;i++){const pr=projSeg(p,pts[i],pts[i+1]);if(!best||pr.dist<best.dist)best={i,t:pr.t,dist:pr.dist}}return best};
+  let b=scan(Math.max(0,S.idx-3),Math.min(n,S.idx+120));
+  if(!b||b.dist>60) b=scan(0,n);
+  const segLen=cum[b.i+1]-cum[b.i];
+  return {i:b.i,s:cum[b.i]+b.t*segLen,lateral:b.dist};
+}
+function maneuverStartS(m){return S.route.cum[m.begin_shape_index]}
+function upcoming(s){
+  const ms=S.route.maneuvers;
+  for(let j=0;j<ms.length;j++){if(maneuverStartS(ms[j])>s+8) return j}
+  return ms.length-1;
+}
+
+// ================= voice / sound =================
+let voices=[];
+if('speechSynthesis' in window){const lv=()=>voices=speechSynthesis.getVoices();lv();speechSynthesis.onvoiceschanged=lv}
+function speak(t,urgent){
+  if(S.muted||!('speechSynthesis' in window)) return;
+  try{
+    const u=new SpeechSynthesisUtterance(t);u.lang='zh-TW';u.rate=1.05;
+    const v=voices.find(v=>/zh[-_]TW/i.test(v.lang))||voices.find(v=>/^zh/i.test(v.lang));if(v)u.voice=v;
+    if(urgent)speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+let actx=null;
+function beep(n=2){
+  if(S.muted) return;
+  try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    for(let i=0;i<n;i++){const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=1040;o.connect(g);g.connect(actx.destination);const t=actx.currentTime+i*.22;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.35,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.16);o.start(t);o.stop(t+.18)}
+  }catch(e){}
+}
+$('#btnMute').onclick=()=>{S.muted=!S.muted;$('#btnMute').textContent=S.muted?'🔇':'🔊';if(S.muted&&'speechSynthesis' in window)speechSynthesis.cancel();toast(S.muted?'語音已關閉':'語音已開啟')};
+
+// ================= speed cameras (Taiwan National Police Agency open data, bundled as cameras.json) =================
+const HEAD={東北:45,東南:135,西南:225,西北:315,東:90,南:180,西:270,北:0};
+// "拍攝方向" text -> compass heading of the traffic it covers (null = both directions / unknown)
+function camHeading(t){
+  if(!t||/雙向/.test(t)) return null;
+  let m=t.match(/([東南西北]+)[向往]([東南西北]+)/); if(m) return HEAD[m[2]]??null;
+  m=t.match(/往([東南西北]+)/); if(m) return HEAD[m[1]]??null;
+  m=t.match(/([東南西北]+)[向下上]/); if(m) return HEAD[m[1]]??null;
+  return null;
+}
+function refreshCamLayer(){
+  if(!S.mapReady) return;
+  const feats=[...S.cams.values()].map(c=>({type:'Feature',geometry:{type:'Point',coordinates:[c.lon,c.lat]},properties:{maxspeed:c.maxspeed||''}}));
+  map.getSource('cams').setData({type:'FeatureCollection',features:feats});
+}
+let camsReady=null;
+function loadCameras(){
+  if(camsReady) return camsReady;
+  camsReady=fetch('cameras.json').then(r=>r.json()).then(list=>{
+    list.forEach((c,i)=>S.cams.set(i,{id:i,lon:c[0],lat:c[1],maxspeed:c[2],hd:camHeading(c[3]),addr:c[4]}));
+    refreshCamLayer(); if(S.route) rebuildCamAlong();
+  }).catch(()=>{camsReady=null});
+  return camsReady;
+}
+function ensureCameras(){loadCameras()}
+// cameras that lie on the route (within 40 m) and cover the direction of travel, with their distance along the route
+function rebuildCamAlong(){
+  if(!S.route) return;
+  const pts=S.route.pts,cum=S.route.cum,out=[];
+  S.cams.forEach(c=>{
+    let best=null;
+    for(let i=0;i<pts.length-1;i++){
+      const a=pts[i],b=pts[i+1];
+      if(c.lat<Math.min(a[1],b[1])-.0005||c.lat>Math.max(a[1],b[1])+.0005||c.lon<Math.min(a[0],b[0])-.0006||c.lon>Math.max(a[0],b[0])+.0006) continue;
+      const pr=projSeg([c.lon,c.lat],a,b);
+      if(pr.dist<40&&(!best||pr.dist<best.dist)) best={i,t:pr.t,dist:pr.dist};
+    }
+    if(!best) return;
+    if(c.hd!=null){const rb=bearing(pts[best.i],pts[best.i+1]);let df=Math.abs(rb-c.hd);if(df>180)df=360-df;if(df>100) return}
+    out.push({id:c.id,s:cum[best.i]+best.t*(cum[best.i+1]-cum[best.i]),maxspeed:c.maxspeed,a1:false,a2:false});
+  });
+  S.camAlong=out.sort((a,b)=>a.s-b.s);
+}
+function camTick(s,spdKmh){
+  const box=$('#camAlert');let shown=false;
+  for(const c of S.camAlong){
+    const d=c.s-s; if(d<-30) continue; if(d>700) break;
+    const lim=c.maxspeed?`限速 ${c.maxspeed}`:'';
+    if(d>0||d>-30){
+      shown=true;
+      const over=c.maxspeed&&spdKmh>c.maxspeed+2;
+      box.className=over?'over':'';box.style.display='flex';
+      $('#camText').textContent=`前方 ${fmtDist(Math.max(d,0))} 測速照相 ${lim}${over?'・請減速':''}`;
+      if(d<=600&&!c.a1){c.a1=true;beep(2);speak(`前方六百公尺，測速照相${c.maxspeed?'，限速'+c.maxspeed:''}`,false)}
+      if(d<=250&&!c.a2){c.a2=true;beep(3);speak('注意測速照相',true)}
+      S.camLim=c.maxspeed||0;
+      break;
+    }
+  }
+  if(!shown){box.style.display='none';S.camLim=0}
+}
+
+// ================= junction / interchange view =================
+function ensureJMap(){
+  if(S.jmap) return;
+  S.jmap=new maplibregl.Map({container:'jmap',style:MAP_STYLE,center:DEFAULT_CENTER,zoom:17,pitch:65,interactive:false,attributionControl:false,fadeDuration:0});
+  S.jmap.on('load',()=>{
+    S.jmapReady=true;
+    S.jmap.addSource('route',{type:'geojson',data:emptyFC});
+    S.jmap.addLayer({id:'rc',type:'line',source:'route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#0b3a9e','line-width':20}});
+    S.jmap.addLayer({id:'rl',type:'line',source:'route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#60a5fa','line-width':13}});
+    drawRoute();
+  });
+}
+function junctionTick(j,m,d){
+  const hwy=(S.speed*3.6)>60;
+  const show=isJunctionLike(m)&&d<(hwy?900:450)&&d>10;
+  const box=$('#junction');
+  if(!show){box.style.display='none';return}
+  ensureJMap(); box.style.display='block';
+  if(!S.jmapReady) return;
+  const pt=S.route.pts[m.begin_shape_index], br=m.bearing_before!=null?m.bearing_before:S.heading;
+  const info=describe(m);
+  $('#jlabel').textContent=(info.sign&&(info.sign.name||info.sign.num)?`${info.sign.num?info.sign.num+' ':''}${info.sign.name||''}`:info.verb)+' · '+fmtDist(d);
+  S.jmap.resize();
+  S.jmap.jumpTo({center:pt,bearing:br,pitch:65,zoom:hwy?16.2:17.3});
+}
+
+// ================= navigation loop =================
+const NAV_PAD=()=>({top:Math.round(innerHeight*.42),bottom:60,left:0,right:0});
+function startNav(sim){
+  if(!S.route) return;
+  S.mode='nav'; S.simMode=!!sim; resetProgress();
+  $('#sheet').style.display='none';$('#topbar').style.display='none';$('#results').style.display='none';
+  $('#navBanner').style.display='block';$('#navBar').style.display='flex';$('#speedBox').style.display='flex';$('#btnMute').style.display='block';
+  $('#fab').style.bottom='calc(110px + var(--safe-b))';
+  S.follow=true;
+  speak('開始導航',false);
+  const m0=S.route.maneuvers[0]; if(m0) speak(describe(m0).text,false);
+  try{if('wakeLock' in navigator)navigator.wakeLock.request('screen').then(w=>S.wake=w).catch(()=>{})}catch(e){}
+  if(sim){startSim()}
+  const p=S.pos||{lon:S.route.pts[0][0],lat:S.route.pts[0][1]};
+  map.easeTo({center:[p.lon,p.lat],zoom:17,pitch:58,bearing:bearing(S.route.pts[0],S.route.pts[Math.min(5,S.route.pts.length-1)]),padding:NAV_PAD(),duration:800});
+  ensureCameras(0);
+  if(S.pos&&!sim) onPosition(S.pos);
+}
+function endNav(silent){
+  stopSim();
+  if(S.mode==='nav'){
+    if(!silent&&'speechSynthesis' in window)speechSynthesis.cancel();
+    $('#navBanner').style.display='none';$('#navBar').style.display='none';$('#speedBox').style.display='none';$('#btnMute').style.display='none';
+    $('#camAlert').style.display='none';$('#junction').style.display='none';$('#topbar').style.display='flex';
+    map.easeTo({pitch:0,bearing:0,padding:{top:0,bottom:0,left:0,right:0},duration:600});
+    if(S.wake){try{S.wake.release()}catch(e){}S.wake=null}
+    S.mode=S.dest&&S.route?'preview':'idle';
+    if(S.mode==='preview'){$('#sheet').style.display='block'}
+  }
+}
+$('#btnStart').onclick=()=>{S.simMode=false;startNav(false)};
+$('#btnSim').onclick=()=>startNav(true);
+$('#btnEnd').onclick=()=>{endNav();setDest(null);S.route=null;drawRoute();$('#sheet').style.display='none';S.mode='idle'};
+
+function onPosition(p){
+  S.pos=p;
+  setUserMarker(p.lon,p.lat,S.mode==='nav'?S.heading:(p.heading||0));
+  if(S.mode!=='nav'||!S.route) return;
+
+  const loc=locate([p.lon,p.lat]);
+  S.idx=loc.i;S.s=loc.s;
+  // off-route detection (real GPS only)
+  if(!S.simMode){
+    if(loc.lateral>45){S.offCount++}else S.offCount=0;
+    if(S.offCount>=3&&!S.rerouting&&Date.now()-S.lastReroute>8000){reroute();return}
+  }
+  const rt=S.route,remain=Math.max(0,rt.length-loc.s);
+  const spdKmh=Math.round(S.speed*3.6);
+  $('#spd').textContent=spdKmh;
+
+  // arrival
+  if(remain<25){speak('已抵達目的地，導航結束',true);toast('已抵達目的地');$('#btnEnd').click();return}
+
+  // upcoming maneuver
+  const j=upcoming(loc.s),m=rt.maneuvers[j],d=Math.max(0,maneuverStartS(m)-loc.s),info=describe(m);
+  $('#nbIcon').textContent=info.icon;$('#nbDist').textContent=fmtDist(d);$('#nbText').textContent=info.text;
+  const sg=info.sign,signEl=$('#sign');
+  if(sg&&(sg.num||sg.name||sg.toward||sg.branch)){
+    signEl.style.display='block';
+    signEl.innerHTML=`${esc([sg.branch,sg.num&&sg.num+' 出口',sg.name].filter(Boolean).join('  '))}${sg.toward?`<small>往 ${esc(sg.toward)}</small>`:''}`;
+  }else signEl.style.display='none';
+  $('#nbRemain').textContent=`${fmtDist(remain)} · ${fmtDur(rt.time*remain/rt.length)}`;
+  const eta=new Date(Date.now()+rt.time*remain/rt.length*1000);
+  $('#nbEta').textContent=`預計 ${String(eta.getHours()).padStart(2,'0')}:${String(eta.getMinutes()).padStart(2,'0')} 抵達`;
+
+  // voice announcements
+  const fast=S.speed*3.6>70;const far=fast?2000:900,near=fast?600:300,now=fast?150:60;
+  const key=j+':';
+  const say=(tag,txt)=>{if(!S.spoken[key+tag]){S.spoken[key+tag]=1;speak(txt,true)}};
+  if(j===rt.maneuvers.length-1&&d<near) say('dest',`${fmtDist(d)}後，${info.text}`);
+  else if(d<=now) say('now',info.text);
+  else if(d<=near) say('near',`${fmtDist(Math.round(d/50)*50)}後，${info.text}`);
+  else if(d<=far&&maneuverStartS(m)-(j>0?maneuverStartS(rt.maneuvers[j-1]):0)>far*1.1) say('far',`前方${fmtDist(Math.round(d/100)*100)}，${info.text}`);
+
+  camTick(loc.s,spdKmh);
+  $('#lim').textContent=S.camLim?`限${S.camLim}`:'km/h';
+  $('#speed').className=(S.camLim&&spdKmh>S.camLim+2)?'over':'';
+  junctionTick(j,m,d);
+  ensureCameras(loc.s);
+  // stack the camera alert and junction view below the (variable-height) instruction banner
+  const top=$('#navBanner').offsetHeight+(parseFloat(getComputedStyle($('#navBanner')).top)||8)+8;
+  $('#camAlert').style.top=top+'px';
+  $('#junction').style.top=(top+($('#camAlert').style.display==='flex'?50:0))+'px';
+
+  if(S.follow){
+    const z=spdKmh>80?15.8:spdKmh>40?16.6:17.3;
+    map.easeTo({center:[p.lon,p.lat],bearing:S.heading,pitch:58,zoom:z,padding:NAV_PAD(),duration:S.simMode?400:900,easing:t=>t});
+  }
+}
+async function reroute(){
+  S.rerouting=true;S.lastReroute=Date.now();
+  toast('偏離路線，重新規劃…');speak('偏離路線，重新規劃路線',true);
+  try{
+    const rt=await fetchRoute({lat:S.pos.lat,lon:S.pos.lon},S.dest);
+    S.route=rt;resetProgress();drawRoute();ensureCameras(0);
+  }catch(e){toast('重新規劃失敗：'+e.message)}
+  S.rerouting=false;
+}
+
+// ================= GPS =================
+let lastFix=null;
+function gpsStart(){
+  if(!('geolocation' in navigator)){toast('此瀏覽器不支援定位');return}
+  S.watch=navigator.geolocation.watchPosition(g=>{
+    if(S.simMode&&S.mode==='nav') return;
+    const c=g.coords,cur=[c.longitude,c.latitude];
+    let hd=c.heading,sp=c.speed;
+    if(lastFix){
+      const dist=hav(lastFix.p,cur),dt=(g.timestamp-lastFix.t)/1000;
+      if(sp==null&&dt>0)sp=dist/dt;
+      if((hd==null||isNaN(hd))&&dist>4)hd=bearing(lastFix.p,cur);
+    }
+    if(hd!=null&&!isNaN(hd)&&(sp||0)>1.2)S.heading=hd;
+    S.speed=sp||0;
+    lastFix={p:cur,t:g.timestamp};
+    const first=!S.pos;
+    onPosition({lon:cur[0],lat:cur[1],heading:S.heading,acc:c.accuracy});
+    if(first&&S.mode==='idle')map.easeTo({center:cur,zoom:15,duration:700});
+  },err=>{toast('無法取得定位：'+(err.code===1?'請允許位置權限':err.message))},{enableHighAccuracy:true,maximumAge:1000,timeout:15000});
+}
+$('#btnLocate').onclick=()=>{
+  if(S.mode==='nav'){S.follow=true;if(S.pos)onPosition(S.pos);return}
+  if(S.pos)map.easeTo({center:[S.pos.lon,S.pos.lat],zoom:16,duration:500});else{gpsStart();toast('定位中…')}
+};
+map.on('dragstart',()=>{if(S.mode==='nav'){S.follow=false;toast('點右側 ⌖ 回到導航視角')}});
+
+// ================= simulation (test drive without moving) =================
+function startSim(){
+  stopSim();
+  const rt=S.route;let s=0,last=performance.now();
+  const target=()=>{const kmh=rt.maneuvers.length?(S.simSpeed||60):60;return kmh/3.6};
+  S.sim=setInterval(()=>{
+    const now=performance.now(),dt=(now-last)/1000;last=now;
+    const mult=S.simMult||1;
+    s=Math.min(rt.length,s+target()*dt*mult);
+    let i=0;while(i<rt.cum.length-2&&rt.cum[i+1]<s)i++;
+    const seg=rt.cum[i+1]-rt.cum[i],t=seg?(s-rt.cum[i])/seg:0;
+    const a=rt.pts[i],b=rt.pts[i+1];
+    const lon=a[0]+(b[0]-a[0])*t,lat=a[1]+(b[1]-a[1])*t;
+    S.heading=bearing(a,b);S.speed=target()*(mult>1?1:1);
+    onPosition({lon,lat,heading:S.heading,acc:5});
+  },400);
+}
+function stopSim(){if(S.sim){clearInterval(S.sim);S.sim=null}}
+
+// ================= boot =================
+gpsStart();
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+window.__navi={S,map,startNav,pickDestination,onPosition,describe};
+})();
+</script>
+</body>
+</html>
